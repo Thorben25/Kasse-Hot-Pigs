@@ -8,7 +8,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#EDF1E6" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#26312B" media="(prefers-color-scheme: dark)">
-<link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Hot%20Pigs%20Kasse%22,%22short_name%22:%22Hot%20Pigs%22,%22display%22:%22standalone%22,%22start_url%22:%22.%22,%22background_color%22:%22%2326312B%22,%22theme_color%22:%22%2326312B%22}">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Hot%20Pigs%20Kasse%22%2C%22short_name%22%3A%22Hot%20Pigs%22%2C%22display%22%3A%22standalone%22%2C%22start_url%22%3A%22.%22%2C%22background_color%22%3A%22%2326312B%22%2C%22theme_color%22%3A%22%2326312B%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22icon-180.png%22%2C%22sizes%22%3A%22180x180%22%2C%22type%22%3A%22image%2Fpng%22%7D%2C%7B%22src%22%3A%22icon-512.png%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
 
 <style>
   :root {
@@ -179,20 +181,23 @@
   }
   .big-plus:active { transform: scale(0.92); }
 
-  .balance-row {
-    display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  .tile-row { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .balance-tile {
+    display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px; cursor: pointer;
   }
-  .balance-row .name { flex: 1; min-width: 0; }
-  .balance-row .name .n { font-weight: 650; font-size: 0.96rem; }
-  .balance-row .name .m { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 0.76rem; color: var(--ink-muted); display: block; }
-  .pill {
+  .balance-tile.owe { background: var(--owe-bg); }
+  .balance-tile.credit { background: var(--credit-bg); }
+  .balance-tile.even { background: var(--neutral-bg); }
+  .balance-tile .name { flex: 1; min-width: 0; }
+  .balance-tile .name .n { font-weight: 700; font-size: 0.95rem; }
+  .balance-tile .name .m { font-size: 0.73rem; opacity: 0.85; display: block; }
+  .balance-tile .amt {
     font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-    font-size: 0.82rem; font-weight: 700; padding: 6px 10px; border-radius: var(--radius-pill);
-    white-space: nowrap;
+    font-size: 1.05rem; font-weight: 800; white-space: nowrap;
   }
-  .pill.owe { background: var(--owe-bg); color: var(--owe); }
-  .pill.credit { background: var(--credit-bg); color: var(--credit); }
-  .pill.even { background: var(--neutral-bg); color: var(--ink-muted); }
+  .balance-tile.owe .amt, .balance-tile.owe .m { color: var(--owe); }
+  .balance-tile.credit .amt, .balance-tile.credit .m { color: var(--credit); }
+  .balance-tile.even .amt, .balance-tile.even .m { color: var(--ink-muted); }
 
   form.entry-form { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
   .field { display: flex; flex-direction: column; gap: 4px; }
@@ -780,20 +785,17 @@
 
     wrap.appendChild(el("h2", { class: "section-title" }, [text("Wer zahlt wie viel")]));
     var card = el("div", { class: "card" });
-    calcs.forEach(function (c, idx) {
-      var row = el("div", { class: "balance-row" });
-      if (idx > 0) row.style.borderTop = "1px solid var(--border)";
-      row.style.cursor = "pointer";
-      var stateText = c.guthaben < -0.004 ? "Verbraucht " + euro(c.verbraucht) : c.guthaben > 0.004 ? "im Guthaben" : "ausgeglichen";
-      row.appendChild(el("div", { class: "name" }, [
+    var tileRow = el("div", { class: "tile-row" });
+    calcs.forEach(function (c) {
+      var kind = c.guthaben < -0.004 ? "owe" : c.guthaben > 0.004 ? "credit" : "even";
+      var tile = el("div", { class: "balance-tile " + kind });
+      var stateText = kind === "owe" ? "Verbraucht " + euro(c.verbraucht) : kind === "credit" ? "im Guthaben" : "ausgeglichen";
+      tile.appendChild(el("div", { class: "name" }, [
         el("span", { class: "n" }, [text(c.name)]),
         el("span", { class: "m" }, [text(stateText)])
       ]));
-      var pill;
-      if (c.guthaben < -0.004) pill = el("span", { class: "pill owe" }, [text("zahlt " + euro(c.zuZahlen))]);
-      else if (c.guthaben > 0.004) pill = el("span", { class: "pill credit" }, [text("bekommt " + euro(c.guthaben))]);
-      else pill = el("span", { class: "pill even" }, [text("0,00 €")]);
-      row.appendChild(pill);
+      var amountText = kind === "owe" ? euro(c.zuZahlen) : kind === "credit" ? euro(c.guthaben) : euro(0);
+      tile.appendChild(el("span", { class: "amt" }, [text(amountText)]));
 
       var detail = el("div", { class: "breakdown", style: "display:none;" }, [
         el("div", {}, [text("Vortrag"), text(euro(c.vortrag))]),
@@ -801,12 +803,13 @@
         el("div", {}, [text("− Verbraucht"), text(euro(c.verbraucht))]),
         el("div", { style: "font-weight:700;color:var(--ink);border-top:1px solid var(--border);margin-top:2px;padding-top:4px;" }, [text("= Guthaben"), text(euro(c.guthaben))])
       ]);
-      row.addEventListener("click", function () { detail.style.display = detail.style.display === "none" ? "block" : "none"; });
+      tile.addEventListener("click", function () { detail.style.display = detail.style.display === "none" ? "block" : "none"; });
 
       var container = el("div", {});
-      container.appendChild(row); container.appendChild(detail);
-      card.appendChild(container);
+      container.appendChild(tile); container.appendChild(detail);
+      tileRow.appendChild(container);
     });
+    card.appendChild(tileRow);
     wrap.appendChild(card);
     return wrap;
   }
