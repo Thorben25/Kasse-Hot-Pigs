@@ -271,6 +271,18 @@
   .breakdown { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 0.82rem; color: var(--ink-muted); padding: 0 14px 12px; }
   .breakdown div { display: flex; justify-content: space-between; padding: 2px 0; }
 
+  .undo-bar {
+    display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 10px;
+    padding: 10px 14px; border-radius: var(--radius-card); border: 1px dashed var(--accent);
+    background: var(--surface-2); color: var(--accent); font-weight: 700; font-size: 0.88rem;
+    cursor: pointer;
+  }
+  .undo-bar:active { transform: scale(0.99); }
+
+  .activity-row { display: flex; justify-content: space-between; gap: 10px; padding: 10px 14px; }
+  .activity-row .txt { font-size: 0.86rem; }
+  .activity-row .when { font-size: 0.76rem; color: var(--ink-muted); white-space: nowrap; flex-shrink: 0; }
+
   .history-actions { display: flex; align-items: center; gap: 4px; }
   .pdf-btn {
     display: flex; align-items: center; gap: 4px; border: 1px solid var(--border); background: var(--surface-2);
@@ -416,8 +428,27 @@
     return {
       version: 1, price: 1.5, people: people,
       period: { startedAt: new Date().toISOString(), vortrag: vortrag, drinks: drinks, einkaufe: einkaufe },
-      history: history
+      history: history,
+      activityLog: []
     };
+  }
+
+  function logActivity(text) {
+    if (!Array.isArray(state.activityLog)) state.activityLog = [];
+    state.activityLog.unshift({ id: uid(), text: text, ts: new Date().toISOString() });
+    state.activityLog = state.activityLog.slice(0, 50);
+  }
+
+  function relativeTime(iso) {
+    var diffMs = Date.now() - new Date(iso).getTime();
+    var min = Math.floor(diffMs / 60000);
+    if (min < 1) return "gerade eben";
+    if (min < 60) return "vor " + min + " Min";
+    var h = Math.floor(min / 60);
+    if (h < 24) return "vor " + h + " Std";
+    var d = Math.floor(h / 24);
+    if (d < 7) return "vor " + d + " Tag" + (d === 1 ? "" : "en");
+    return new Date(iso).toLocaleDateString("de-DE");
   }
 
   var SYNC_URL = "/.netlify/functions/state";
@@ -429,6 +460,7 @@
       if (!raw) return defaultState();
       var parsed = JSON.parse(raw);
       if (!parsed || !parsed.people) return defaultState();
+      if (!Array.isArray(parsed.activityLog)) parsed.activityLog = [];
       return parsed;
     } catch (e) { return defaultState(); }
   }
@@ -465,6 +497,7 @@
   var state = load();
   var currentView = "erfassen";
   var searchTerm = "";
+  var lastQuickAction = null;
   var syncStatus = "connecting";
   var userIsTyping = function () {
     var t = document.activeElement && document.activeElement.tagName;
@@ -493,6 +526,7 @@
       if (data.updatedAt && data.updatedAt === state.updatedAt) { setSyncStatus("synced"); return; }
       if (!isInitial && userIsTyping()) { setSyncStatus("synced"); return; }
       state = data;
+      if (!Array.isArray(state.activityLog)) state.activityLog = [];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       setSyncStatus("synced");
       renderMain(); renderTabs();
@@ -581,6 +615,26 @@
 
   function viewErfassen() {
     var wrap = el("div", {});
+
+    if (lastQuickAction) {
+      var undoBar = el("button", { class: "undo-bar", type: "button" }, []);
+      var arrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      arrow.setAttribute("viewBox", "0 0 24 24"); arrow.setAttribute("width", "16"); arrow.setAttribute("height", "16");
+      arrow.innerHTML = '<path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+      undoBar.appendChild(arrow);
+      undoBar.appendChild(el("span", {}, [text(
+        lastQuickAction.personName + " " + (lastQuickAction.delta > 0 ? "+1" : "–1") + " · Rückgängig"
+      )]));
+      undoBar.addEventListener("click", function () {
+        var a = lastQuickAction;
+        state.period.drinks[a.personId] = Math.max(0, (state.period.drinks[a.personId] || 0) - a.delta);
+        logActivity("Rückgängig: " + a.personName + " " + (a.delta > 0 ? "+1" : "–1") + " Bier");
+        lastQuickAction = null;
+        save(); renderMain();
+      });
+      wrap.appendChild(undoBar);
+    }
+
     wrap.appendChild(el("input", {
       class: "search", type: "search", placeholder: "Person suchen…", value: searchTerm,
       oninput: function (e) { searchTerm = e.target.value; renderMain(); }
@@ -606,7 +660,10 @@
 
       var minus = el("button", { class: "step-btn", "aria-label": "Ein Bier abziehen bei " + p.name }, [text("–")]);
       minus.addEventListener("click", function () {
+        if ((state.period.drinks[p.id] || 0) <= 0) return;
         state.period.drinks[p.id] = Math.max(0, (state.period.drinks[p.id] || 0) - 1);
+        logActivity(p.name + " –1 Bier");
+        lastQuickAction = { personId: p.id, personName: p.name, delta: -1 };
         save(); renderMain();
       });
 
@@ -616,7 +673,11 @@
       });
       count.addEventListener("change", function (e) {
         var v = Math.max(0, parseInt(e.target.value, 10) || 0);
-        state.period.drinks[p.id] = v; save(); renderMain();
+        var old = state.period.drinks[p.id] || 0;
+        state.period.drinks[p.id] = v;
+        if (v !== old) logActivity(p.name + ": Bier-Anzahl " + old + " → " + v);
+        lastQuickAction = null;
+        save(); renderMain();
       });
 
       var stepper = el("div", { class: "stepper" }, [minus, count]);
@@ -624,6 +685,8 @@
       var plus = el("button", { class: "big-plus", "aria-label": "Ein Bier für " + p.name }, [text("+")]);
       plus.addEventListener("click", function () {
         state.period.drinks[p.id] = (state.period.drinks[p.id] || 0) + 1;
+        logActivity(p.name + " +1 Bier");
+        lastQuickAction = { personId: p.id, personName: p.name, delta: 1 };
         save(); renderMain();
       });
 
@@ -663,7 +726,10 @@
       e.preventDefault();
       var amt = parseFloat(String(amountInput.value).replace(",", "."));
       if (!select.value || !amt || amt <= 0) return;
+      var buyer = state.people.find(function (p) { return p.id === select.value; });
       state.period.einkaufe.unshift({ id: uid(), personId: select.value, amount: amt, note: noteInput.value.trim(), date: new Date().toISOString() });
+      logActivity("Einkauf: " + (buyer ? buyer.name : "?") + " " + euro(amt) + (noteInput.value.trim() ? " (" + noteInput.value.trim() + ")" : ""));
+      lastQuickAction = null;
       save(); renderMain();
     });
     formCard.appendChild(form);
@@ -687,6 +753,7 @@
         del.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-1 13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1L6 7"/></svg>';
         del.addEventListener("click", function () {
           state.period.einkaufe = state.period.einkaufe.filter(function (e) { return e.id !== item.id; });
+          logActivity("Einkauf gelöscht: " + (person ? person.name : "?") + " " + euro(item.amount));
           save(); renderMain();
         });
         row.appendChild(del);
@@ -796,6 +863,22 @@
     closeCard.appendChild(closeForm);
     wrap.appendChild(closeCard);
 
+    wrap.appendChild(el("h2", { class: "section-title" }, [text("Letzte Aktivität")]));
+    var activityCard = el("div", { class: "card" });
+    var log = Array.isArray(state.activityLog) ? state.activityLog : [];
+    if (log.length === 0) {
+      activityCard.appendChild(el("div", { class: "empty-hint" }, [text("Noch keine Aktivität aufgezeichnet.")]));
+    } else {
+      log.slice(0, 15).forEach(function (entry, idx) {
+        var row = el("div", { class: "activity-row" });
+        if (idx > 0) row.style.borderTop = "1px solid var(--border)";
+        row.appendChild(el("span", { class: "txt" }, [text(entry.text)]));
+        row.appendChild(el("span", { class: "when" }, [text(relativeTime(entry.ts))]));
+        activityCard.appendChild(row);
+      });
+    }
+    wrap.appendChild(activityCard);
+
     return wrap;
   }
 
@@ -815,6 +898,7 @@
         state.people = state.people.filter(function (x) { return x.id !== p.id; });
         delete state.period.vortrag[p.id]; delete state.period.drinks[p.id];
         state.period.einkaufe = state.period.einkaufe.filter(function (e) { return e.personId !== p.id; });
+        logActivity("Person entfernt: " + p.name);
         save(); renderMain();
       });
       row.appendChild(del);
@@ -828,6 +912,7 @@
       if (!n) return;
       var p = { id: uid(), name: n };
       state.people.push(p); state.period.vortrag[p.id] = 0; state.period.drinks[p.id] = 0;
+      logActivity("Person hinzugefügt: " + n);
       addInput.value = ""; save(); renderMain();
     });
     addRow.appendChild(addInput); addRow.appendChild(addBtn);
@@ -841,7 +926,11 @@
     priceRow.appendChild(el("div", {}, [el("div", { class: "lbl" }, [text("Preis pro Getränk")])]));
     var priceInput = el("input", { type: "number", step: "0.1", min: "0", style: "width:80px;text-align:right;padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);", value: state.price });
     priceInput.addEventListener("change", function (e) {
-      var v = parseFloat(String(e.target.value).replace(",", ".")); if (v > 0) { state.price = v; save(); updateTopbar(); }
+      var v = parseFloat(String(e.target.value).replace(",", "."));
+      if (v > 0 && v !== state.price) {
+        logActivity("Preis pro Getränk: " + euro(state.price) + " → " + euro(v));
+        state.price = v; save(); updateTopbar();
+      }
     });
     priceRow.appendChild(priceInput);
     settingsCard.appendChild(priceRow);
@@ -925,6 +1014,8 @@
       });
       var entry = { id: uid(), label: label, closedAt: new Date().toISOString(), price: state.price, rows: rows };
       state.history.unshift(entry);
+      logActivity("Abrechnung erzeugt: " + label);
+      lastQuickAction = null;
 
       var newVortrag = {};
       state.people.forEach(function (p) { newVortrag[p.id] = personCalc(p).guthaben; });
@@ -962,7 +1053,9 @@
   document.getElementById("tabbar").addEventListener("click", function (e) {
     var btn = e.target.closest(".tab-btn");
     if (!btn) return;
-    currentView = btn.getAttribute("data-view");
+    var nextView = btn.getAttribute("data-view");
+    if (nextView !== "erfassen") lastQuickAction = null;
+    currentView = nextView;
     searchTerm = "";
     renderTabs(); renderMain();
     document.getElementById("main").scrollTop = 0;
