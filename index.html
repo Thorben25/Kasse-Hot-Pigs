@@ -1,0 +1,980 @@
+<meta charset="UTF-8">
+<title>Hot Pigs Kasse</title>
+<meta name="description" content="Getränke-Strichliste für Hot Pigs – wer trinkt was, wer zahlt was.">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hot Pigs Kasse">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#EDF1E6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#26312B" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Hot%20Pigs%20Kasse%22,%22short_name%22:%22Hot%20Pigs%22,%22display%22:%22standalone%22,%22start_url%22:%22.%22,%22background_color%22:%22%2326312B%22,%22theme_color%22:%22%2326312B%22}">
+
+<style>
+  :root {
+    --bg: #EDF1E6;
+    --surface: #FFFFFF;
+    --surface-2: #F7F9F3;
+    --ink: #22291D;
+    --ink-muted: #5C6653;
+    --border: #D6DCC9;
+    --accent: #B8722E;
+    --accent-ink: #FFFFFF;
+    --owe: #B23A2E;
+    --owe-bg: #F6E2DE;
+    --credit: #3F6B4A;
+    --credit-bg: #E1EBE0;
+    --neutral-bg: #E9ECE1;
+    --shadow: 0 1px 2px rgba(34,41,29,0.06), 0 4px 14px rgba(34,41,29,0.07);
+    --radius-card: 14px;
+    --radius-pill: 999px;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #26312B;
+      --surface: #2F3B33;
+      --surface-2: #2A362F;
+      --ink: #EDE6D8;
+      --ink-muted: #A9B3A0;
+      --border: #3D4A41;
+      --accent: #D99A44;
+      --accent-ink: #22291D;
+      --owe: #E2695A;
+      --owe-bg: #4A2E29;
+      --credit: #7FA88A;
+      --credit-bg: #2C3F32;
+      --neutral-bg: #34413A;
+      --shadow: 0 1px 2px rgba(0,0,0,0.25), 0 4px 16px rgba(0,0,0,0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #26312B; --surface: #2F3B33; --surface-2: #2A362F; --ink: #EDE6D8; --ink-muted: #A9B3A0;
+    --border: #3D4A41; --accent: #D99A44; --accent-ink: #22291D; --owe: #E2695A; --owe-bg: #4A2E29;
+    --credit: #7FA88A; --credit-bg: #2C3F32; --neutral-bg: #34413A;
+    --shadow: 0 1px 2px rgba(0,0,0,0.25), 0 4px 16px rgba(0,0,0,0.3);
+  }
+  :root[data-theme="light"] {
+    --bg: #EDF1E6; --surface: #FFFFFF; --surface-2: #F7F9F3; --ink: #22291D; --ink-muted: #5C6653;
+    --border: #D6DCC9; --accent: #B8722E; --accent-ink: #FFFFFF; --owe: #B23A2E; --owe-bg: #F6E2DE;
+    --credit: #3F6B4A; --credit-bg: #E1EBE0; --neutral-bg: #E9ECE1;
+    --shadow: 0 1px 2px rgba(34,41,29,0.06), 0 4px 14px rgba(34,41,29,0.07);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  button, input, select { font-family: inherit; color: inherit; }
+  button { -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, input:focus-visible, select:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  #app {
+    max-width: 520px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background:
+      repeating-linear-gradient(var(--bg) 0 39px, var(--border) 39px 40px);
+    background-attachment: local;
+  }
+
+  header.topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    padding: calc(env(safe-area-inset-top, 0px) + 14px) 18px 12px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: baseline; gap: 8px; }
+  .brand .mark { font-size: 1.3rem; }
+  .brand h1 {
+    margin: 0; font-size: 1.15rem; font-weight: 800; letter-spacing: 0.01em;
+    text-wrap: balance;
+  }
+  .brand .sub { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-muted); }
+  .topbar .total {
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+    text-align: right; font-size: 0.95rem; font-weight: 600;
+  }
+  .topbar .total small { display: block; font-family: var(--font-ui); font-size: 0.62rem; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--ink-muted); font-weight: 600; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; transition: background-color 0.3s; }
+  .sync-dot.sync-synced { background: var(--credit); }
+  .sync-dot.sync-saving { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+  .sync-dot.sync-connecting { background: var(--ink-muted); animation: pulse 1s ease-in-out infinite; }
+  .sync-dot.sync-offline { background: var(--owe); }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  main { flex: 1; padding: 14px 14px calc(96px + env(safe-area-inset-bottom, 0px)); }
+
+  h2.section-title {
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--ink-muted); margin: 18px 4px 8px; font-weight: 700;
+  }
+  h2.section-title:first-child { margin-top: 4px; }
+
+  .search {
+    width: 100%; padding: 11px 14px; border-radius: var(--radius-pill);
+    border: 1px solid var(--border); background: var(--surface);
+    font-size: 0.92rem; color: var(--ink);
+  }
+  .search::placeholder { color: var(--ink-muted); }
+
+  .banner {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-bottom: 4px;
+  }
+  .banner .tile {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card);
+    padding: 12px 14px; box-shadow: var(--shadow);
+  }
+  .banner .tile .label { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-muted); font-weight: 700; }
+  .banner .tile .value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 1.3rem; font-weight: 700; margin-top: 2px; }
+  .banner .tile.owe .value { color: var(--owe); }
+  .banner .tile.credit .value { color: var(--credit); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card);
+    box-shadow: var(--shadow); margin-bottom: 10px; overflow: hidden;
+  }
+
+  .person-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+  }
+  .person-row .name { flex: 1; min-width: 0; }
+  .person-row .name .n { font-weight: 650; font-size: 0.98rem; display: block; }
+  .person-row .name .m { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 0.78rem; color: var(--ink-muted); }
+  .count-input {
+    width: 52px; text-align: center; font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+    font-size: 1.15rem; font-weight: 700; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--surface-2); padding: 6px 2px;
+  }
+  .stepper { display: flex; align-items: center; gap: 6px; }
+  .step-btn {
+    width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface-2); font-size: 1.05rem; font-weight: 700; line-height: 1;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .step-btn:active { transform: scale(0.94); }
+  .big-plus {
+    width: 44px; height: 44px; border-radius: var(--radius-pill); border: none;
+    background: var(--accent); color: var(--accent-ink); font-size: 1.3rem; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    box-shadow: var(--shadow); flex-shrink: 0;
+  }
+  .big-plus:active { transform: scale(0.92); }
+
+  .balance-row {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  }
+  .balance-row .name { flex: 1; min-width: 0; }
+  .balance-row .name .n { font-weight: 650; font-size: 0.96rem; }
+  .balance-row .name .m { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 0.76rem; color: var(--ink-muted); display: block; }
+  .pill {
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+    font-size: 0.82rem; font-weight: 700; padding: 6px 10px; border-radius: var(--radius-pill);
+    white-space: nowrap;
+  }
+  .pill.owe { background: var(--owe-bg); color: var(--owe); }
+  .pill.credit { background: var(--credit-bg); color: var(--credit); }
+  .pill.even { background: var(--neutral-bg); color: var(--ink-muted); }
+
+  form.entry-form { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); font-weight: 700; }
+  .field input, .field select {
+    padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface-2); font-size: 0.95rem;
+  }
+  .btn-primary {
+    padding: 12px; border-radius: 12px; border: none; background: var(--accent); color: var(--accent-ink);
+    font-weight: 700; font-size: 0.95rem; cursor: pointer;
+  }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-secondary {
+    padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2);
+    color: var(--ink); font-weight: 650; font-size: 0.88rem; cursor: pointer;
+  }
+  .btn-danger { color: var(--owe); border-color: var(--owe-bg); }
+
+  .purchase-item, .history-row, .person-manage-row {
+    display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-top: 1px solid var(--border);
+  }
+  .purchase-item:first-child, .history-row:first-child, .person-manage-row:first-child { border-top: none; }
+  .purchase-item .who { flex: 1; }
+  .purchase-item .who .n { font-weight: 650; font-size: 0.9rem; }
+  .purchase-item .who .note { font-size: 0.76rem; color: var(--ink-muted); }
+  .purchase-item .amt { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 700; }
+  .icon-btn {
+    width: 30px; height: 30px; border-radius: 8px; border: none; background: transparent;
+    color: var(--ink-muted); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .icon-btn:active { background: var(--surface-2); }
+
+  .history-row { justify-content: space-between; cursor: pointer; }
+  .history-row .lbl { font-weight: 700; }
+  .history-row .lbl .date { display: block; font-size: 0.74rem; color: var(--ink-muted); font-weight: 500; }
+  .history-row .tot { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--owe); font-weight: 700; }
+  .chevron { color: var(--ink-muted); }
+
+  .settings-group { padding: 4px 4px 0; }
+  .settings-item { display: flex; align-items: center; justify-content: space-between; padding: 13px 14px; border-top: 1px solid var(--border); }
+  .settings-item:first-child { border-top: none; }
+  .settings-item .lbl { font-weight: 650; font-size: 0.92rem; }
+  .settings-item .hint { font-size: 0.76rem; color: var(--ink-muted); margin-top: 2px; }
+
+  nav.tabbar {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; z-index: 30;
+    width: 100%; max-width: 520px;
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+  }
+  .tab-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    background: none; border: none; padding: 6px 2px; cursor: pointer; color: var(--ink-muted);
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.01em;
+  }
+  .tab-btn svg { width: 21px; height: 21px; }
+  .tab-btn.active { color: var(--accent); }
+
+  .overlay {
+    position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.42);
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .sheet {
+    width: 100%; max-width: 520px; background: var(--surface); border-radius: 18px 18px 0 0;
+    padding: 18px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+    max-height: 82vh; overflow-y: auto;
+  }
+  .sheet h3 { margin: 0 0 12px; font-size: 1.05rem; }
+  .sheet-actions { display: flex; gap: 10px; margin-top: 14px; }
+  .sheet-actions .btn-primary, .sheet-actions .btn-secondary { flex: 1; }
+
+  .empty-hint { padding: 22px 16px; text-align: center; color: var(--ink-muted); font-size: 0.88rem; }
+  .breakdown { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 0.82rem; color: var(--ink-muted); padding: 0 14px 12px; }
+  .breakdown div { display: flex; justify-content: space-between; padding: 2px 0; }
+
+  .history-actions { display: flex; align-items: center; gap: 4px; }
+  .pdf-btn {
+    display: flex; align-items: center; gap: 4px; border: 1px solid var(--border); background: var(--surface-2);
+    color: var(--ink-muted); border-radius: var(--radius-pill); padding: 5px 10px; font-size: 0.72rem;
+    font-weight: 700; cursor: pointer;
+  }
+  .pdf-btn svg { width: 13px; height: 13px; }
+
+  #printArea { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea {
+      display: block; position: absolute; top: 0; left: 0; width: 100%;
+      padding: 28px; font-family: Georgia, "Times New Roman", serif; color: #111;
+    }
+    #printArea h1 { font-size: 1.4rem; margin: 0 0 2px; }
+    #printArea .meta { font-size: 0.85rem; color: #444; margin: 0 0 18px; }
+    #printArea table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    #printArea th, #printArea td {
+      text-align: left; padding: 7px 10px; border-bottom: 1px solid #ccc; font-size: 0.9rem;
+    }
+    #printArea th:not(:first-child), #printArea td:not(:first-child) { text-align: right; font-family: "Courier New", monospace; }
+    #printArea thead th { border-bottom: 2px solid #111; font-family: Georgia, serif; }
+    #printArea tfoot td { border-top: 2px solid #111; border-bottom: none; font-weight: 700; padding-top: 10px; }
+  }
+</style>
+
+<div id="printArea"></div>
+
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">🍺</span>
+      <div>
+        <h1>Hot Pigs Kasse</h1>
+        <div class="sub">Strichliste</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span id="syncDot" class="sync-dot sync-connecting" title="Verbinde…"></span>
+      <div class="total" id="topbarTotal"><small>Offen</small>0,00 €</div>
+    </div>
+  </header>
+
+  <main id="main"></main>
+
+  <nav class="tabbar" id="tabbar">
+    <button class="tab-btn" data-view="erfassen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M10 4v16M14 4v16M18 4l3 16"/></svg>
+      Erfassen
+    </button>
+    <button class="tab-btn" data-view="einkaeufe">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.5 10a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2L4 8Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg>
+      Einkäufe
+    </button>
+    <button class="tab-btn" data-view="saldo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 7l-3 6a3 3 0 0 0 6 0l-3-6Zm14 0l-3 6a3 3 0 0 0 6 0l-3-6ZM5 7h14M8 21h8"/></svg>
+      Saldo
+    </button>
+    <button class="tab-btn" data-view="verlauf">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      Verlauf
+    </button>
+    <button class="tab-btn" data-view="verwalten">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.96 19a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.96a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.1.62.49 1.16 1.04 1.44H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15Z"/></svg>
+      Verwalten
+    </button>
+  </nav>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "hotpigs-kasse-v1";
+
+  var SEED_PEOPLE = ["Patrick","Thorben","Amelie","Lenard","Jannis","Daniel","Leonard","Hanna","Aimee","Katelin","Ramon","Sascha","Fabrice","Heiner","Günther","Klaus B","Luimann"];
+
+  var SEED_HISTORY = [
+    {label:"April", closedAt:"2026-04-30", rows:[
+      {name:"Patrick",verbraucht:16.5,guthaben:0},{name:"Thorben",verbraucht:28.5,guthaben:-28.5},
+      {name:"Amelie",verbraucht:33,guthaben:-13},{name:"Lenard",verbraucht:25.5,guthaben:0},
+      {name:"Jannis",verbraucht:19.5,guthaben:0},{name:"Daniel",verbraucht:64.5,guthaben:0},
+      {name:"Leonard",verbraucht:39,guthaben:-19},{name:"Hanna",verbraucht:0,guthaben:0},
+      {name:"Aimee",verbraucht:9,guthaben:-9},{name:"Katelin",verbraucht:4.5,guthaben:-4.5},
+      {name:"Ramon",verbraucht:0,guthaben:0},{name:"Sascha",verbraucht:6,guthaben:-6},
+      {name:"Fabrice",verbraucht:7.5,guthaben:0},{name:"Heiner",verbraucht:15,guthaben:-5},
+      {name:"Günther",verbraucht:0,guthaben:0},{name:"Klaus B",verbraucht:3,guthaben:-3},
+      {name:"Luimann",verbraucht:1.5,guthaben:-1.5}
+    ]},
+    {label:"Mai", closedAt:"2026-05-31", rows:[
+      {name:"Patrick",verbraucht:10.5,guthaben:-7},{name:"Thorben",verbraucht:37.5,guthaben:72.99},
+      {name:"Amelie",verbraucht:37.5,guthaben:-37.5},{name:"Lenard",verbraucht:19.5,guthaben:33.62},
+      {name:"Jannis",verbraucht:27,guthaben:-26.5},{name:"Daniel",verbraucht:52.5,guthaben:-43.67},
+      {name:"Leonard",verbraucht:15,guthaben:-15},{name:"Hanna",verbraucht:1.5,guthaben:-1.5},
+      {name:"Aimee",verbraucht:13.5,guthaben:-13.5},{name:"Katelin",verbraucht:3,guthaben:-3},
+      {name:"Ramon",verbraucht:7.5,guthaben:-7.5},{name:"Sascha",verbraucht:0,guthaben:0},
+      {name:"Fabrice",verbraucht:0,guthaben:37.72},{name:"Heiner",verbraucht:0,guthaben:0},
+      {name:"Günther",verbraucht:0,guthaben:0},{name:"Klaus B",verbraucht:0,guthaben:0},
+      {name:"Luimann",verbraucht:0,guthaben:0}
+    ]},
+    {label:"Juni", closedAt:"2026-06-30", rows:[
+      {name:"Patrick",verbraucht:7.5,guthaben:-7.5},{name:"Thorben",verbraucht:36,guthaben:-21},
+      {name:"Amelie",verbraucht:33,guthaben:-33},{name:"Lenard",verbraucht:4.5,guthaben:0},
+      {name:"Jannis",verbraucht:9,guthaben:-9},{name:"Daniel",verbraucht:54,guthaben:-54},
+      {name:"Leonard",verbraucht:34.5,guthaben:-34.5},{name:"Hanna",verbraucht:10.5,guthaben:-10.5},
+      {name:"Aimee",verbraucht:10.5,guthaben:-10.5},{name:"Katelin",verbraucht:3,guthaben:-3},
+      {name:"Ramon",verbraucht:7.5,guthaben:-7.5},{name:"Sascha",verbraucht:13.5,guthaben:-13.5},
+      {name:"Fabrice",verbraucht:18,guthaben:-18},{name:"Heiner",verbraucht:0,guthaben:0},
+      {name:"Günther",verbraucht:0,guthaben:0},{name:"Klaus B",verbraucht:0,guthaben:0},
+      {name:"Luimann",verbraucht:0,guthaben:0}
+    ]},
+    {label:"Juli", closedAt:"2026-07-31", rows:[
+      {name:"Patrick",verbraucht:7.5,guthaben:-7.5},{name:"Thorben",verbraucht:36,guthaben:-21},
+      {name:"Amelie",verbraucht:33,guthaben:-33},{name:"Lenard",verbraucht:4.5,guthaben:0},
+      {name:"Jannis",verbraucht:9,guthaben:-9},{name:"Daniel",verbraucht:54,guthaben:-54},
+      {name:"Leonard",verbraucht:34.5,guthaben:-34.5},{name:"Hanna",verbraucht:10.5,guthaben:-10.5},
+      {name:"Aimee",verbraucht:10.5,guthaben:-10.5},{name:"Katelin",verbraucht:3,guthaben:-3},
+      {name:"Ramon",verbraucht:7.5,guthaben:-7.5},{name:"Sascha",verbraucht:13.5,guthaben:-13.5},
+      {name:"Fabrice",verbraucht:18,guthaben:-18},{name:"Heiner",verbraucht:0,guthaben:0},
+      {name:"Günther",verbraucht:0,guthaben:0},{name:"Klaus B",verbraucht:0,guthaben:0},
+      {name:"Luimann",verbraucht:0,guthaben:0}
+    ]}
+  ];
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  function defaultState() {
+    var people = SEED_PEOPLE.map(function (n) { return { id: uid(), name: n }; });
+    var vortrag = {}, drinks = {};
+    people.forEach(function (p) {
+      vortrag[p.id] = 0;
+      drinks[p.id] = 0;
+    });
+    var einkaufe = [];
+    var history = SEED_HISTORY.slice().reverse().map(function (m) {
+      return {
+        id: uid(), label: m.label, closedAt: m.closedAt, price: 1.5,
+        rows: m.rows.map(function (r) { return { name: r.name, verbraucht: r.verbraucht, guthaben: r.guthaben }; })
+      };
+    });
+    return {
+      version: 1, price: 1.5, people: people,
+      period: { startedAt: new Date().toISOString(), vortrag: vortrag, drinks: drinks, einkaufe: einkaufe },
+      history: history
+    };
+  }
+
+  var SYNC_URL = "/.netlify/functions/state";
+  var SYNC_SECRET = "b7de63291d4e48a27f3b385701266601";
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultState();
+      var parsed = JSON.parse(raw);
+      if (!parsed || !parsed.people) return defaultState();
+      return parsed;
+    } catch (e) { return defaultState(); }
+  }
+
+  // Serialized so rapid successive saves can't complete out of order: each POST only
+  // starts once the previous one has finished, and always sends whatever `state` is
+  // current at send time - so the last write is always the one that lands.
+  var syncChain = Promise.resolve();
+  var syncPending = false;
+
+  function save(opts) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (opts && opts.skipSync) return;
+    syncPending = true;
+    setSyncStatus("saving");
+    syncChain = syncChain.then(function () {
+      var payload = JSON.stringify(state);
+      return fetch(SYNC_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-sync-secret": SYNC_SECRET },
+        body: payload
+      }).then(function (r) {
+        if (!r.ok) throw new Error("bad status");
+        return r.json();
+      }).then(function (res) {
+        state.updatedAt = res.updatedAt;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        syncPending = false;
+        setSyncStatus("synced");
+      });
+    }).catch(function () { syncPending = false; setSyncStatus("offline"); });
+  }
+
+  var state = load();
+  var currentView = "erfassen";
+  var searchTerm = "";
+  var syncStatus = "connecting";
+  var userIsTyping = function () {
+    var t = document.activeElement && document.activeElement.tagName;
+    return t === "INPUT" || t === "TEXTAREA" || t === "SELECT";
+  };
+
+  function setSyncStatus(s) {
+    syncStatus = s;
+    var el = document.getElementById("syncDot");
+    if (!el) return;
+    el.className = "sync-dot sync-" + s;
+    el.title = s === "synced" ? "Mit allen Geräten synchronisiert"
+      : s === "saving" ? "Wird gespeichert…"
+      : s === "connecting" ? "Verbinde…" : "Offline – Änderungen nur lokal gespeichert";
+  }
+
+  function fetchServerState(isInitial) {
+    fetch(SYNC_URL, { headers: { "x-sync-secret": SYNC_SECRET } }).then(function (r) {
+      if (!r.ok) throw new Error("bad status");
+      return r.json();
+    }).then(function (data) {
+      if (!data) {
+        if (isInitial) { setSyncStatus("synced"); save(); }
+        return;
+      }
+      if (data.updatedAt && data.updatedAt === state.updatedAt) { setSyncStatus("synced"); return; }
+      if (!isInitial && userIsTyping()) { setSyncStatus("synced"); return; }
+      state = data;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      setSyncStatus("synced");
+      renderMain(); renderTabs();
+    }).catch(function () { setSyncStatus("offline"); });
+  }
+
+  function euro(n) {
+    var v = Math.round((n + Number.EPSILON) * 100) / 100;
+    if (Object.is(v, -0)) v = 0;
+    return v.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+  }
+
+  function einkaufSum(personId) {
+    return state.period.einkaufe.filter(function (e) { return e.personId === personId; })
+      .reduce(function (s, e) { return s + Number(e.amount || 0); }, 0);
+  }
+
+  function personCalc(p) {
+    var verbraucht = (state.period.drinks[p.id] || 0) * state.price;
+    var vortrag = state.period.vortrag[p.id] || 0;
+    var eink = einkaufSum(p.id);
+    var guthaben = vortrag + eink - verbraucht;
+    return { verbraucht: verbraucht, vortrag: vortrag, einkaufe: eink, guthaben: guthaben, zuZahlen: guthaben < 0 ? -guthaben : 0 };
+  }
+
+  function el(tag, attrs, children) {
+    var e = document.createElement(tag);
+    attrs = attrs || {};
+    Object.keys(attrs).forEach(function (k) {
+      if (k === "class") e.className = attrs[k];
+      else if (k === "html") e.innerHTML = attrs[k];
+      else if (k.indexOf("data-") === 0) e.setAttribute(k, attrs[k]);
+      else e[k] = attrs[k];
+    });
+    (children || []).forEach(function (c) { if (c) e.appendChild(c); });
+    return e;
+  }
+  function text(s) { return document.createTextNode(s); }
+
+  function updateTopbar() {
+    var total = state.people.reduce(function (s, p) { return s + personCalc(p).zuZahlen; }, 0);
+    document.getElementById("topbarTotal").innerHTML = "<small>Offen</small>" + euro(total);
+  }
+
+  function printAbrechnung(entry) {
+    var area = document.getElementById("printArea");
+    area.innerHTML = "";
+    var d = new Date(entry.closedAt);
+    area.appendChild(el("h1", {}, [text("Abrechnung " + entry.label)]));
+    area.appendChild(el("p", { class: "meta" }, [
+      text("Hot Pigs Kasse · abgeschlossen am " + d.toLocaleDateString("de-DE") + " · " + euro(entry.price) + " pro Getränk")
+    ]));
+
+    var table = el("table", {});
+    var thead = el("thead", {}, [el("tr", {}, [
+      el("th", {}, [text("Name")]), el("th", {}, [text("Verbraucht")]),
+      el("th", {}, [text("Guthaben")]), el("th", {}, [text("Zu zahlen")])
+    ])]);
+    table.appendChild(thead);
+
+    var tbody = el("tbody", {});
+    var totalVerbraucht = 0, totalZu = 0;
+    entry.rows.forEach(function (r) {
+      var zu = r.guthaben < -0.004 ? -r.guthaben : 0;
+      totalVerbraucht += r.verbraucht; totalZu += zu;
+      tbody.appendChild(el("tr", {}, [
+        el("td", {}, [text(r.name)]),
+        el("td", {}, [text(euro(r.verbraucht))]),
+        el("td", {}, [text(euro(r.guthaben))]),
+        el("td", {}, [text(zu > 0 ? euro(zu) : "–")])
+      ]));
+    });
+    table.appendChild(tbody);
+
+    var tfoot = el("tfoot", {}, [el("tr", {}, [
+      el("td", {}, [text("Summe")]), el("td", {}, [text(euro(totalVerbraucht))]),
+      el("td", {}, []), el("td", {}, [text(euro(totalZu))])
+    ])]);
+    table.appendChild(tfoot);
+
+    area.appendChild(table);
+    window.print();
+  }
+
+  // ---------- Views ----------
+
+  function viewErfassen() {
+    var wrap = el("div", {});
+    wrap.appendChild(el("input", {
+      class: "search", type: "search", placeholder: "Person suchen…", value: searchTerm,
+      oninput: function (e) { searchTerm = e.target.value; renderMain(); }
+    }));
+
+    var list = el("div", { class: "card" });
+    var people = state.people.slice().sort(function (a, b) { return a.name.localeCompare(b.name, "de"); });
+    var filtered = people.filter(function (p) { return p.name.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1; });
+
+    if (filtered.length === 0) {
+      list.appendChild(el("div", { class: "empty-hint" }, [text("Niemand gefunden.")]));
+    }
+
+    filtered.forEach(function (p, idx) {
+      var calc = personCalc(p);
+      var row = el("div", { class: "person-row" });
+      if (idx > 0) row.style.borderTop = "1px solid var(--border)";
+
+      var nameBox = el("div", { class: "name" }, [
+        el("span", { class: "n" }, [text(p.name)]),
+        el("span", { class: "m" }, [text(euro(calc.verbraucht))])
+      ]);
+
+      var minus = el("button", { class: "step-btn", "aria-label": "Ein Bier abziehen bei " + p.name }, [text("–")]);
+      minus.addEventListener("click", function () {
+        state.period.drinks[p.id] = Math.max(0, (state.period.drinks[p.id] || 0) - 1);
+        save(); renderMain();
+      });
+
+      var count = el("input", {
+        class: "count-input", type: "number", inputMode: "numeric", min: "0",
+        value: state.period.drinks[p.id] || 0
+      });
+      count.addEventListener("change", function (e) {
+        var v = Math.max(0, parseInt(e.target.value, 10) || 0);
+        state.period.drinks[p.id] = v; save(); renderMain();
+      });
+
+      var stepper = el("div", { class: "stepper" }, [minus, count]);
+
+      var plus = el("button", { class: "big-plus", "aria-label": "Ein Bier für " + p.name }, [text("+")]);
+      plus.addEventListener("click", function () {
+        state.period.drinks[p.id] = (state.period.drinks[p.id] || 0) + 1;
+        save(); renderMain();
+      });
+
+      row.appendChild(nameBox); row.appendChild(stepper); row.appendChild(plus);
+      list.appendChild(row);
+    });
+
+    wrap.appendChild(el("h2", { class: "section-title" }, [text(state.people.length + " Personen · " + euro(state.price) + " pro Getränk")]));
+    wrap.appendChild(list);
+    return wrap;
+  }
+
+  function viewEinkaeufe() {
+    var wrap = el("div", {});
+    var formCard = el("div", { class: "card" });
+    var form = el("form", { class: "entry-form" });
+
+    var personField = el("div", { class: "field" }, [el("label", {}, [text("Wer hat eingekauft?")])]);
+    var select = el("select", { required: true });
+    state.people.slice().sort(function (a, b) { return a.name.localeCompare(b.name, "de"); }).forEach(function (p) {
+      select.appendChild(el("option", { value: p.id }, [text(p.name)]));
+    });
+    personField.appendChild(select);
+
+    var amountField = el("div", { class: "field" }, [el("label", {}, [text("Betrag (€)")])]);
+    var amountInput = el("input", { type: "number", step: "0.01", min: "0", inputMode: "decimal", required: true, placeholder: "0,00" });
+    amountField.appendChild(amountInput);
+
+    var noteField = el("div", { class: "field" }, [el("label", {}, [text("Notiz (optional)")])]);
+    var noteInput = el("input", { type: "text", placeholder: "z. B. EDEKA Kasten" });
+    noteField.appendChild(noteInput);
+
+    var submit = el("button", { class: "btn-primary", type: "submit" }, [text("Einkauf hinzufügen")]);
+
+    form.appendChild(personField); form.appendChild(amountField); form.appendChild(noteField); form.appendChild(submit);
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var amt = parseFloat(String(amountInput.value).replace(",", "."));
+      if (!select.value || !amt || amt <= 0) return;
+      state.period.einkaufe.unshift({ id: uid(), personId: select.value, amount: amt, note: noteInput.value.trim(), date: new Date().toISOString() });
+      save(); renderMain();
+    });
+    formCard.appendChild(form);
+    wrap.appendChild(formCard);
+
+    wrap.appendChild(el("h2", { class: "section-title" }, [text("Einkäufe diese Periode")]));
+    var listCard = el("div", { class: "card" });
+    if (state.period.einkaufe.length === 0) {
+      listCard.appendChild(el("div", { class: "empty-hint" }, [text("Noch keine Einkäufe erfasst.")]));
+    } else {
+      state.period.einkaufe.forEach(function (item) {
+        var person = state.people.find(function (p) { return p.id === item.personId; });
+        var row = el("div", { class: "purchase-item" });
+        var d = new Date(item.date);
+        row.appendChild(el("div", { class: "who" }, [
+          el("span", { class: "n" }, [text((person ? person.name : "?") + (item.note ? " · " + item.note : ""))]),
+          el("span", { class: "note" }, [text(d.toLocaleDateString("de-DE"))])
+        ]));
+        row.appendChild(el("span", { class: "amt" }, [text(euro(item.amount))]));
+        var del = el("button", { class: "icon-btn", "aria-label": "Löschen" }, []);
+        del.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-1 13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1L6 7"/></svg>';
+        del.addEventListener("click", function () {
+          state.period.einkaufe = state.period.einkaufe.filter(function (e) { return e.id !== item.id; });
+          save(); renderMain();
+        });
+        row.appendChild(del);
+        listCard.appendChild(row);
+      });
+    }
+    wrap.appendChild(listCard);
+    return wrap;
+  }
+
+  function viewSaldo() {
+    var wrap = el("div", {});
+    var calcs = state.people.map(function (p) { return Object.assign({ id: p.id, name: p.name }, personCalc(p)); });
+    var totalOffen = calcs.reduce(function (s, c) { return s + c.zuZahlen; }, 0);
+    var totalGuthaben = calcs.reduce(function (s, c) { return s + (c.guthaben > 0 ? c.guthaben : 0); }, 0);
+
+    var banner = el("div", { class: "banner" }, [
+      el("div", { class: "tile owe" }, [el("div", { class: "label" }, [text("Offene Summe")]), el("div", { class: "value" }, [text(euro(totalOffen))])]),
+      el("div", { class: "tile credit" }, [el("div", { class: "label" }, [text("Guthaben gesamt")]), el("div", { class: "value" }, [text(euro(totalGuthaben))])])
+    ]);
+    wrap.appendChild(banner);
+
+    calcs.sort(function (a, b) { return b.zuZahlen - a.zuZahlen; });
+
+    wrap.appendChild(el("h2", { class: "section-title" }, [text("Wer zahlt wie viel")]));
+    var card = el("div", { class: "card" });
+    calcs.forEach(function (c, idx) {
+      var row = el("div", { class: "balance-row" });
+      if (idx > 0) row.style.borderTop = "1px solid var(--border)";
+      row.style.cursor = "pointer";
+      var stateText = c.guthaben < -0.004 ? "Verbraucht " + euro(c.verbraucht) : c.guthaben > 0.004 ? "im Guthaben" : "ausgeglichen";
+      row.appendChild(el("div", { class: "name" }, [
+        el("span", { class: "n" }, [text(c.name)]),
+        el("span", { class: "m" }, [text(stateText)])
+      ]));
+      var pill;
+      if (c.guthaben < -0.004) pill = el("span", { class: "pill owe" }, [text("zahlt " + euro(c.zuZahlen))]);
+      else if (c.guthaben > 0.004) pill = el("span", { class: "pill credit" }, [text("bekommt " + euro(c.guthaben))]);
+      else pill = el("span", { class: "pill even" }, [text("0,00 €")]);
+      row.appendChild(pill);
+
+      var detail = el("div", { class: "breakdown", style: "display:none;" }, [
+        el("div", {}, [text("Vortrag"), text(euro(c.vortrag))]),
+        el("div", {}, [text("+ Einkäufe"), text(euro(c.einkaufe))]),
+        el("div", {}, [text("− Verbraucht"), text(euro(c.verbraucht))]),
+        el("div", { style: "font-weight:700;color:var(--ink);border-top:1px solid var(--border);margin-top:2px;padding-top:4px;" }, [text("= Guthaben"), text(euro(c.guthaben))])
+      ]);
+      row.addEventListener("click", function () { detail.style.display = detail.style.display === "none" ? "block" : "none"; });
+
+      var container = el("div", {});
+      container.appendChild(row); container.appendChild(detail);
+      card.appendChild(container);
+    });
+    wrap.appendChild(card);
+    return wrap;
+  }
+
+  function viewVerlauf() {
+    var wrap = el("div", {});
+    wrap.appendChild(el("h2", { class: "section-title" }, [text("Abgeschlossene Monate")]));
+    var card = el("div", { class: "card" });
+    if (state.history.length === 0) {
+      card.appendChild(el("div", { class: "empty-hint" }, [text("Noch kein Monat abgeschlossen.")]));
+    } else {
+      state.history.forEach(function (m, idx) {
+        var totalZu = m.rows.reduce(function (s, r) { return s + (r.guthaben < 0 ? -r.guthaben : 0); }, 0);
+        var row = el("div", { class: "history-row" });
+        if (idx > 0) row.style.borderTop = "1px solid var(--border)";
+        var d = new Date(m.closedAt);
+        row.appendChild(el("div", { class: "lbl" }, [text(m.label), el("span", { class: "date" }, [text("abgeschlossen " + d.toLocaleDateString("de-DE"))])]));
+        var pdfBtn = el("button", { class: "pdf-btn", type: "button" }, []);
+        pdfBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg><span>PDF</span>';
+        pdfBtn.addEventListener("click", function (e) { e.stopPropagation(); printAbrechnung(m); });
+        var right = el("div", { style: "display:flex;align-items:center;gap:10px;" }, [
+          el("span", { class: "tot" }, [text(euro(totalZu))]),
+          pdfBtn,
+          (function () { var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("width", "16"); s.setAttribute("height", "16");
+            s.setAttribute("class", "chevron"); s.innerHTML = '<path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+            return s; })()
+        ]);
+        row.appendChild(right);
+
+        var detail = el("div", { class: "breakdown", style: "display:none;padding:0 14px 14px;" });
+        m.rows.slice().sort(function (a, b) { return b.guthaben - a.guthaben; }).forEach(function (r) {
+          if (r.verbraucht === 0 && r.guthaben === 0) return;
+          var line = el("div", {}, [text(r.name), text((r.guthaben < 0 ? "zahlt " : r.guthaben > 0 ? "bekommt " : "") + euro(Math.abs(r.guthaben)))]);
+          detail.appendChild(line);
+        });
+        row.addEventListener("click", function () { detail.style.display = detail.style.display === "none" ? "block" : "none"; });
+
+        var container = el("div", {});
+        container.appendChild(row); container.appendChild(detail);
+        card.appendChild(container);
+      });
+    }
+    wrap.appendChild(card);
+
+    wrap.appendChild(el("h2", { class: "section-title" }, [text("Aktuelle Periode")]));
+    var closeCard = el("div", { class: "card" });
+    var closeForm = el("div", { class: "entry-form" });
+    closeForm.appendChild(el("p", { style: "margin:0;font-size:0.85rem;color:var(--ink-muted);" },
+      [text("Erzeugt aus dem aktuellen Stand eine Abrechnung, speichert sie im Verlauf, setzt \"Erfassen\" auf Null zurück (offene Guthaben werden automatisch als neuer Vortrag übernommen) und öffnet direkt den PDF-Export.")]));
+    var closeBtn = el("button", { class: "btn-primary" }, [text("Abrechnung erzeugen")]);
+    closeBtn.addEventListener("click", openCloseModal);
+    closeForm.appendChild(closeBtn);
+    closeCard.appendChild(closeForm);
+    wrap.appendChild(closeCard);
+
+    return wrap;
+  }
+
+  function viewVerwalten() {
+    var wrap = el("div", {});
+
+    wrap.appendChild(el("h2", { class: "section-title" }, [text("Personen")]));
+    var peopleCard = el("div", { class: "card" });
+    state.people.slice().sort(function (a, b) { return a.name.localeCompare(b.name, "de"); }).forEach(function (p, idx) {
+      var row = el("div", { class: "person-manage-row" });
+      if (idx > 0) row.style.borderTop = "1px solid var(--border)";
+      row.appendChild(el("div", { style: "flex:1;font-weight:600;" }, [text(p.name)]));
+      var del = el("button", { class: "icon-btn", "aria-label": "Entfernen" }, []);
+      del.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-1 13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1L6 7"/></svg>';
+      del.addEventListener("click", function () {
+        if (!confirm(p.name + " wirklich entfernen? Alle Daten dieser Person gehen verloren.")) return;
+        state.people = state.people.filter(function (x) { return x.id !== p.id; });
+        delete state.period.vortrag[p.id]; delete state.period.drinks[p.id];
+        state.period.einkaufe = state.period.einkaufe.filter(function (e) { return e.personId !== p.id; });
+        save(); renderMain();
+      });
+      row.appendChild(del);
+      peopleCard.appendChild(row);
+    });
+    var addRow = el("div", { class: "entry-form", style: "padding-top:10px;" });
+    var addInput = el("input", { type: "text", placeholder: "Neue Person…" });
+    var addBtn = el("button", { class: "btn-secondary" }, [text("Hinzufügen")]);
+    addBtn.addEventListener("click", function () {
+      var n = addInput.value.trim();
+      if (!n) return;
+      var p = { id: uid(), name: n };
+      state.people.push(p); state.period.vortrag[p.id] = 0; state.period.drinks[p.id] = 0;
+      addInput.value = ""; save(); renderMain();
+    });
+    addRow.appendChild(addInput); addRow.appendChild(addBtn);
+    peopleCard.appendChild(addRow);
+    wrap.appendChild(peopleCard);
+
+    wrap.appendChild(el("h2", { class: "section-title" }, [text("Einstellungen")]));
+    var settingsCard = el("div", { class: "card settings-group" });
+
+    var priceRow = el("div", { class: "settings-item" });
+    priceRow.appendChild(el("div", {}, [el("div", { class: "lbl" }, [text("Preis pro Getränk")])]));
+    var priceInput = el("input", { type: "number", step: "0.1", min: "0", style: "width:80px;text-align:right;padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);", value: state.price });
+    priceInput.addEventListener("change", function (e) {
+      var v = parseFloat(String(e.target.value).replace(",", ".")); if (v > 0) { state.price = v; save(); updateTopbar(); }
+    });
+    priceRow.appendChild(priceInput);
+    settingsCard.appendChild(priceRow);
+
+    var exportRow = el("div", { class: "settings-item" });
+    exportRow.appendChild(el("div", {}, [el("div", { class: "lbl" }, [text("Backup exportieren")]), el("div", { class: "hint" }, [text("Als Datei speichern")])]));
+    var exportBtn = el("button", { class: "btn-secondary" }, [text("Export")]);
+    exportBtn.addEventListener("click", function () {
+      var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a"); a.href = url; a.download = "hotpigs-kasse-backup.json"; a.click();
+      URL.revokeObjectURL(url);
+    });
+    exportRow.appendChild(exportBtn);
+    settingsCard.appendChild(exportRow);
+
+    var importRow = el("div", { class: "settings-item" });
+    importRow.appendChild(el("div", {}, [el("div", { class: "lbl" }, [text("Backup importieren")]), el("div", { class: "hint" }, [text("Ersetzt alle aktuellen Daten")])]));
+    var importInput = el("input", { type: "file", accept: "application/json", style: "display:none;" });
+    importInput.addEventListener("change", function (e) {
+      var file = e.target.files[0]; if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var data = JSON.parse(reader.result);
+          if (!data.people) throw new Error("ungültig");
+          if (!confirm("Backup importieren und aktuelle Daten überschreiben?")) return;
+          state = data; save(); renderMain();
+        } catch (err) { alert("Diese Datei konnte nicht gelesen werden."); }
+      };
+      reader.readAsText(file);
+    });
+    var importBtn = el("button", { class: "btn-secondary" }, [text("Import")]);
+    importBtn.addEventListener("click", function () { importInput.click(); });
+    importRow.appendChild(importBtn); importRow.appendChild(importInput);
+    settingsCard.appendChild(importRow);
+
+    var resetRow = el("div", { class: "settings-item" });
+    resetRow.appendChild(el("div", {}, [el("div", { class: "lbl" }, [text("Alles zurücksetzen")]), el("div", { class: "hint" }, [text("Löscht alle Daten unwiderruflich")])]));
+    var resetBtn = el("button", { class: "btn-secondary btn-danger" }, [text("Zurücksetzen")]);
+    resetBtn.addEventListener("click", function () {
+      if (!confirm("Wirklich ALLE Daten löschen? Das kann nicht rückgängig gemacht werden.")) return;
+      if (!confirm("Ganz sicher? Personen, Strichlisten und Verlauf werden komplett gelöscht.")) return;
+      state = defaultState(); state.history = []; state.period.einkaufe = [];
+      state.people.forEach(function (p) { state.period.drinks[p.id] = 0; state.period.vortrag[p.id] = 0; });
+      save(); renderMain();
+    });
+    resetRow.appendChild(resetBtn);
+    settingsCard.appendChild(resetRow);
+
+    wrap.appendChild(settingsCard);
+    return wrap;
+  }
+
+  // ---------- Modal: Periode abschließen ----------
+
+  function openCloseModal() {
+    var monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+    var now = new Date();
+    var suggestion = monthNames[now.getMonth()] + " " + now.getFullYear();
+
+    var overlay = el("div", { class: "overlay" });
+    var sheet = el("div", { class: "sheet" });
+    sheet.appendChild(el("h3", {}, [text("Abrechnung erzeugen")]));
+    sheet.appendChild(el("p", { style: "margin:0 0 10px;color:var(--ink-muted);font-size:0.88rem;" },
+      [text("Alle aktuellen Salden werden im Verlauf gespeichert, \"Erfassen\" wird auf Null gesetzt und der PDF-Export öffnet sich automatisch.")]));
+    var field = el("div", { class: "field" }, [el("label", {}, [text("Bezeichnung")])]);
+    var input = el("input", { type: "text", value: suggestion });
+    field.appendChild(input);
+    sheet.appendChild(field);
+
+    var actions = el("div", { class: "sheet-actions" });
+    var cancel = el("button", { class: "btn-secondary" }, [text("Abbrechen")]);
+    cancel.addEventListener("click", function () { overlay.remove(); });
+    var confirmBtn = el("button", { class: "btn-primary" }, [text("Abrechnung erzeugen")]);
+    confirmBtn.addEventListener("click", function () {
+      var label = input.value.trim() || suggestion;
+      var rows = state.people.map(function (p) {
+        var c = personCalc(p);
+        return { name: p.name, verbraucht: c.verbraucht, guthaben: c.guthaben };
+      });
+      var entry = { id: uid(), label: label, closedAt: new Date().toISOString(), price: state.price, rows: rows };
+      state.history.unshift(entry);
+
+      var newVortrag = {};
+      state.people.forEach(function (p) { newVortrag[p.id] = personCalc(p).guthaben; });
+      state.period = { startedAt: new Date().toISOString(), vortrag: newVortrag, drinks: {}, einkaufe: [] };
+      state.people.forEach(function (p) { state.period.drinks[p.id] = 0; });
+
+      save(); overlay.remove(); currentView = "verlauf"; renderMain(); renderTabs();
+      printAbrechnung(entry);
+    });
+    actions.appendChild(cancel); actions.appendChild(confirmBtn);
+    sheet.appendChild(actions);
+
+    overlay.appendChild(sheet);
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+
+  // ---------- Router ----------
+
+  var VIEWS = { erfassen: viewErfassen, einkaeufe: viewEinkaeufe, saldo: viewSaldo, verlauf: viewVerlauf, verwalten: viewVerwalten };
+
+  function renderMain() {
+    var main = document.getElementById("main");
+    main.innerHTML = "";
+    main.appendChild(VIEWS[currentView]());
+    updateTopbar();
+  }
+
+  function renderTabs() {
+    document.querySelectorAll(".tab-btn").forEach(function (btn) {
+      btn.classList.toggle("active", btn.getAttribute("data-view") === currentView);
+    });
+  }
+
+  document.getElementById("tabbar").addEventListener("click", function (e) {
+    var btn = e.target.closest(".tab-btn");
+    if (!btn) return;
+    currentView = btn.getAttribute("data-view");
+    searchTerm = "";
+    renderTabs(); renderMain();
+    document.getElementById("main").scrollTop = 0;
+  });
+
+  renderTabs();
+  renderMain();
+
+  fetchServerState(true);
+  setInterval(function () { fetchServerState(false); }, 8000);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") fetchServerState(false);
+  });
+})();
+</script>
